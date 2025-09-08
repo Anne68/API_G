@@ -1,0 +1,15 @@
+[Unit]
+Description=ETL Jeux Video - ajoute 50 jeux et met à jour la base
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/etl-games
+ExecStart=/usr/bin/python3 etl_games.py --limit 50
+Environment=PYTHONUNBUFFERED=1
+# Optional: si vous utilisez un venv
+# ExecStart=/opt/etl-games/.venv/bin/python etl_games.py --limit 50
+
+[Install]
+WantedBy=multi-user.target

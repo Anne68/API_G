@@ -1,0 +1,4 @@
+requests
+python-dotenv
+SQLAlchemy>=2.0
+PyMySQL

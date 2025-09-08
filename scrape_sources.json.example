@@ -1,0 +1,40 @@
+{
+  "sources": [
+    {
+      "name": "example-site-1",
+      "base_url": "https://www.example.com",
+      "list_urls": [
+        "https://www.example.com/new-games"
+      ],
+      "item_selector": ".game-card",
+      "fields": {
+        "title": ".game-title",
+        "link": "a.game-link",
+        "platforms": ".platforms",
+        "genres": ".genres",
+        "release_date": ".release-date",
+        "rating": ".rating"
+      },
+      "constant_fields": {
+        "platforms": ""
+      }
+    },
+    {
+      "name": "example-site-2",
+      "base_url": "https://sub.example.org",
+      "list_urls": [
+        "https://sub.example.org/releases?page=1",
+        "https://sub.example.org/releases?page=2"
+      ],
+      "item_selector": "li.release",
+      "fields": {
+        "title": ".title",
+        "link": "a",
+        "release_date": ".date"
+      },
+      "constant_fields": {
+        "genres": "Unknown"
+      }
+    }
+  ]
+}
