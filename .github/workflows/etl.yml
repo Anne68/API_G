@@ -3,29 +3,33 @@ name: ETL Games (API + Scraping)
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "0 5 * * *"  # 07:00 Paris
+    - cron: "0 5 * * *"   # 07:00 Paris
 
 jobs:
   run-etl:
     runs-on: self-hosted
     defaults:
       run:
-        shell: pwsh   # PowerShell
+        shell: powershell   # ✅ utiliser PowerShell (pas pwsh)
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 👉 Autoriser les scripts dans CETTE session seulement (pas besoin d'admin)
-      - name: Allow PowerShell scripts for this job
-        run: |
-          Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-          Write-Host "ExecutionPolicy:" (Get-ExecutionPolicy)
+      # ✅ Autoriser les scripts pour l'utilisateur courant (persistant, pas besoin d'admin)
+      - name: Relax PowerShell execution policy
+        run: Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
+
+      - name: Show PowerShell version
+        run: $PSVersionTable
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Python version
+        run: python --version
 
       - name: Install dependencies
         run: |
@@ -47,12 +51,12 @@ jobs:
           HTTP_RETRIES=3
           SCRAPE_ENABLED=${{ secrets.SCRAPE_ENABLED }}
           SCRAPE_CONFIG=scrape_sources.json
-          "@ | Set-Content -NoNewline .env
+          "@ | Set-Content -NoNewline .env -Encoding UTF8
 
       - name: Write scrape_sources.json if provided
         run: |
           if ("${{ secrets.SCRAPE_CONFIG_JSON }}" -ne "") {
-            "${{ secrets.SCRAPE_CONFIG_JSON }}" | Set-Content -NoNewline scrape_sources.json
+            "${{ secrets.SCRAPE_CONFIG_JSON }}" | Set-Content -NoNewline scrape_sources.json -Encoding UTF8
             Write-Host "scrape_sources.json created from secret."
           } else {
             Write-Host "No SCRAPE_CONFIG_JSON secret; skipping."
