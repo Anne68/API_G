@@ -3,14 +3,17 @@ name: ETL Games (API + Scraping)
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "0 5 * * *"   # 07:00 Paris
+    - cron: "0 5 * * *"   # 07:00 Paris (UTC=05:00)
+  push:
+    branches:
+      - main
 
 jobs:
   run-etl:
     runs-on: self-hosted
     defaults:
       run:
-        shell: cmd   # tout en CMD, pas de PowerShell
+        shell: cmd   # exécute tout en CMD (pas de PowerShell)
 
     steps:
       - name: Checkout
