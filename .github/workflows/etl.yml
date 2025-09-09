@@ -1,14 +1,17 @@
 name: ETL Games (API + Scraping)
 
 on:
-  workflow_dispatch: {}            # bouton "Run workflow"
+  workflow_dispatch: {}
   schedule:
-    # Exécution quotidienne à 07:00 Europe/Paris (UTC = 05:00)
+    # 07:00 heure de Paris (05:00 UTC)
     - cron: "0 5 * * *"
 
 jobs:
   run-etl:
     runs-on: self-hosted
+    defaults:
+      run:
+        shell: pwsh   # 👉 force PowerShell sur Windows
 
     steps:
       - name: Checkout
@@ -18,38 +21,40 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build .env from secrets
+      - name: Build .env from secrets (Windows PowerShell)
         run: |
-          {
-            echo "RAWG_API_KEY=${{ secrets.RAWG_API_KEY }}"
-            echo "DB_USER=${{ secrets.DB_USER }}"
-            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
-            echo "DB_HOST=${{ secrets.DB_HOST }}"
-            echo "DB_PORT=${{ secrets.DB_PORT }}"
-            echo "DB_NAME=${{ secrets.DB_NAME }}"
-            echo "DB_TABLE=${{ secrets.DB_TABLE }}"
-            echo "LOG_LEVEL=INFO"
-            echo "HTTP_TIMEOUT=20"
-            echo "HTTP_RETRIES=3"
-            echo "SCRAPE_ENABLED=${{ secrets.SCRAPE_ENABLED }}"
-            echo "SCRAPE_CONFIG=scrape_sources.json"
-          } > .env
+          @"
+          RAWG_API_KEY=${{ secrets.RAWG_API_KEY }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=${{ secrets.DB_PORT }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_TABLE=${{ secrets.DB_TABLE }}
+          LOG_LEVEL=INFO
+          HTTP_TIMEOUT=20
+          HTTP_RETRIES=3
+          SCRAPE_ENABLED=${{ secrets.SCRAPE_ENABLED }}
+          SCRAPE_CONFIG=scrape_sources.json
+          "@ | Set-Content -NoNewline .env
 
-      - name: (Option) Écrire scrape_sources.json depuis un secret
-        if: ${{ secrets.SCRAPE_CONFIG_JSON != '' }}
+      - name: Write scrape_sources.json if provided
         run: |
-          echo '${{ secrets.SCRAPE_CONFIG_JSON }}' > scrape_sources.json
+          if ("${{ secrets.SCRAPE_CONFIG_JSON }}" -ne "") {
+            "${{ secrets.SCRAPE_CONFIG_JSON }}" | Set-Content -NoNewline scrape_sources.json
+            Write-Host "scrape_sources.json created from secret."
+          } else {
+            Write-Host "No SCRAPE_CONFIG_JSON secret; skipping."
+          }
 
       - name: Run ETL (50 derniers jeux + update)
-        run: |
-          python etl_games.py --limit 50
+        run: python etl_games.py --limit 50
 
       - name: Upload log (artifact)
         if: always()
