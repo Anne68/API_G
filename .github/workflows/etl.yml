@@ -10,15 +10,33 @@ jobs:
     runs-on: self-hosted
     defaults:
       run:
-        shell: powershell   # ✅ utiliser PowerShell (pas pwsh)
+        shell: powershell
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ✅ Autoriser les scripts pour l'utilisateur courant (persistant, pas besoin d'admin)
+      # ✅ Multiple approaches to ensure script execution works
       - name: Relax PowerShell execution policy
-        run: Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
+        run: |
+          # Try multiple scopes to ensure policy is set
+          try {
+            Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+            Write-Host "✅ Process scope policy set to Bypass"
+          } catch {
+            Write-Warning "Failed to set Process scope: $_"
+          }
+          
+          try {
+            Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
+            Write-Host "✅ CurrentUser scope policy set to RemoteSigned"
+          } catch {
+            Write-Warning "Failed to set CurrentUser scope: $_"
+          }
+          
+          # Verify current policy
+          Write-Host "Current execution policies:"
+          Get-ExecutionPolicy -List
 
       - name: Show PowerShell version
         run: $PSVersionTable
@@ -63,7 +81,10 @@ jobs:
           }
 
       - name: Run ETL (50 derniers jeux + update)
-        run: python etl_games.py --limit 50
+        run: |
+          # Ensure we can execute the Python script
+          $env:PYTHONUNBUFFERED = "1"
+          python etl_games.py --limit 50
 
       - name: Upload log (artifact)
         if: always()
