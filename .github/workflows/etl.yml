@@ -3,19 +3,24 @@ name: ETL Games (API + Scraping)
 on:
   workflow_dispatch: {}
   schedule:
-    # 07:00 heure de Paris (05:00 UTC)
-    - cron: "0 5 * * *"
+    - cron: "0 5 * * *"  # 07:00 Paris
 
 jobs:
   run-etl:
     runs-on: self-hosted
     defaults:
       run:
-        shell: pwsh   # 👉 force PowerShell sur Windows
+        shell: pwsh   # PowerShell
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # 👉 Autoriser les scripts dans CETTE session seulement (pas besoin d'admin)
+      - name: Allow PowerShell scripts for this job
+        run: |
+          Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+          Write-Host "ExecutionPolicy:" (Get-ExecutionPolicy)
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -27,7 +32,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build .env from secrets (Windows PowerShell)
+      - name: Build .env from secrets
         run: |
           @"
           RAWG_API_KEY=${{ secrets.RAWG_API_KEY }}
