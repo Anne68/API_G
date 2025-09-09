@@ -10,7 +10,7 @@ jobs:
     runs-on: self-hosted
     defaults:
       run:
-        shell: cmd   # ✅ exécute tout en CMD (pas de PowerShell)
+        shell: cmd   # tout en CMD, pas de PowerShell
 
     steps:
       - name: Checkout
@@ -24,28 +24,27 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build .env from secrets (CMD)
+      # ✅ Ecrit .env avec Python (aucun problème de caractères spéciaux)
+      - name: Build .env from secrets (safe)
+        env:
+          RAWG_API_KEY: ${{ secrets.RAWG_API_KEY }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_TABLE: ${{ secrets.DB_TABLE }}
+          SCRAPE_ENABLED: ${{ secrets.SCRAPE_ENABLED }}
         run: |
-          > .env echo RAWG_API_KEY=${{ secrets.RAWG_API_KEY }}
-          >> .env echo DB_USER=${{ secrets.DB_USER }}
-          >> .env echo DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          >> .env echo DB_HOST=${{ secrets.DB_HOST }}
-          >> .env echo DB_PORT=${{ secrets.DB_PORT }}
-          >> .env echo DB_NAME=${{ secrets.DB_NAME }}
-          >> .env echo DB_TABLE=${{ secrets.DB_TABLE }}
-          >> .env echo LOG_LEVEL=INFO
-          >> .env echo HTTP_TIMEOUT=20
-          >> .env echo HTTP_RETRIES=3
-          >> .env echo SCRAPE_ENABLED=${{ secrets.SCRAPE_ENABLED }}
-          >> .env echo SCRAPE_CONFIG=scrape_sources.json
+          python -c "import os; vals={'LOG_LEVEL':'INFO','HTTP_TIMEOUT':'20','HTTP_RETRIES':'3','SCRAPE_CONFIG':'scrape_sources.json'}; lines=[f'RAWG_API_KEY={os.environ.get(\"RAWG_API_KEY\",\"\")}',f'DB_USER={os.environ.get(\"DB_USER\",\"\")}',f'DB_PASSWORD={os.environ.get(\"DB_PASSWORD\",\"\")}',f'DB_HOST={os.environ.get(\"DB_HOST\",\"\")}',f'DB_PORT={os.environ.get(\"DB_PORT\",\"\")}',f'DB_NAME={os.environ.get(\"DB_NAME\",\"\")}',f'DB_TABLE={os.environ.get(\"DB_TABLE\",\"\")}',f'SCRAPE_ENABLED={os.environ.get(\"SCRAPE_ENABLED\",\"\")}',*[f'{k}={v}' for k,v in vals.items()]]; open('.env','w',encoding='utf-8').write('\\n'.join(lines))"
 
-      # Optionnel : n'exécute que si le secret est renseigné
+      # Optionnel : n'écrit le fichier que si le secret est présent
       - name: Write scrape_sources.json if provided
         if: ${{ secrets.SCRAPE_CONFIG_JSON != '' }}
         env:
           SCRAPE_CONFIG_JSON: ${{ secrets.SCRAPE_CONFIG_JSON }}
         run: |
-          python -c "import os,io,sys; open('scrape_sources.json','w',encoding='utf-8').write(os.environ.get('SCRAPE_CONFIG_JSON',''))"
+          python -c "import os; open('scrape_sources.json','w',encoding='utf-8').write(os.environ.get('SCRAPE_CONFIG_JSON',''))"
           echo scrape_sources.json created from secret
 
       - name: Run ETL (50 nouveaux jeux + update)
