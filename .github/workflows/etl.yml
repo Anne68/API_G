@@ -1,44 +1,12 @@
-name: ETL Games (API + Scraping)
-
-on:
-  workflow_dispatch: {}
-  schedule:
-    - cron: "0 5 * * *"   # 07:00 Paris
-
-jobs:
-  run-etl:
-    runs-on: self-hosted
-    defaults:
-      run:
-        shell: powershell
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # ✅ Multiple approaches to ensure script execution works
-      - name: Relax PowerShell execution policy
+- name: Relax PowerShell execution policy
+        shell: pwsh
         run: |
-          # Try multiple scopes to ensure policy is set
-          try {
-            Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-            Write-Host "✅ Process scope policy set to Bypass"
-          } catch {
-            Write-Warning "Failed to set Process scope: $_"
-          }
-          
-          try {
-            Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
-            Write-Host "✅ CurrentUser scope policy set to RemoteSigned"
-          } catch {
-            Write-Warning "Failed to set CurrentUser scope: $_"
-          }
-          
-          # Verify current policy
-          Write-Host "Current execution policies:"
+          Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+          Write-Host "✅ Execution policy set to Bypass for current process"
           Get-ExecutionPolicy -List
 
       - name: Show PowerShell version
+        shell: pwsh
         run: $PSVersionTable
 
       - name: Set up Python
@@ -47,14 +15,17 @@ jobs:
           python-version: "3.11"
 
       - name: Python version
+        shell: cmd
         run: python --version
 
       - name: Install dependencies
+        shell: cmd
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Build .env from secrets
+        shell: pwsh
         run: |
           @"
           RAWG_API_KEY=${{ secrets.RAWG_API_KEY }}
@@ -72,6 +43,7 @@ jobs:
           "@ | Set-Content -NoNewline .env -Encoding UTF8
 
       - name: Write scrape_sources.json if provided
+        shell: pwsh
         run: |
           if ("${{ secrets.SCRAPE_CONFIG_JSON }}" -ne "") {
             "${{ secrets.SCRAPE_CONFIG_JSON }}" | Set-Content -NoNewline scrape_sources.json -Encoding UTF8
@@ -81,15 +53,5 @@ jobs:
           }
 
       - name: Run ETL (50 derniers jeux + update)
-        run: |
-          # Ensure we can execute the Python script
-          $env:PYTHONUNBUFFERED = "1"
-          python etl_games.py --limit 50
-
-      - name: Upload log (artifact)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: etl-logs
-          path: etl_games.log
-          if-no-files-found: ignore
+        shell: cmd
+        run: python etl_games.py --limit 50
