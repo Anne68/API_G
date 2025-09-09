@@ -1,12 +1,26 @@
-- name: Relax PowerShell execution policy
-  shell: pwsh
-  run: |
-    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-    Write-Host "✅ Execution policy set to Bypass for current process"
-    Get-ExecutionPolicy -List
+name: ETL Games (API + Scraping)
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 5 * * *"   # 07:00 Paris
+
+jobs:
+  run-etl:
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: powershell   # ✅ utiliser PowerShell (pas pwsh)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ✅ Autoriser les scripts pour l'utilisateur courant (persistant, pas besoin d'admin)
+      - name: Relax PowerShell execution policy
+        run: Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
 
       - name: Show PowerShell version
-        shell: pwsh
         run: $PSVersionTable
 
       - name: Set up Python
@@ -15,17 +29,14 @@
           python-version: "3.11"
 
       - name: Python version
-        shell: cmd
         run: python --version
 
       - name: Install dependencies
-        shell: cmd
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Build .env from secrets
-        shell: pwsh
         run: |
           @"
           RAWG_API_KEY=${{ secrets.RAWG_API_KEY }}
@@ -43,7 +54,6 @@
           "@ | Set-Content -NoNewline .env -Encoding UTF8
 
       - name: Write scrape_sources.json if provided
-        shell: pwsh
         run: |
           if ("${{ secrets.SCRAPE_CONFIG_JSON }}" -ne "") {
             "${{ secrets.SCRAPE_CONFIG_JSON }}" | Set-Content -NoNewline scrape_sources.json -Encoding UTF8
@@ -53,5 +63,12 @@
           }
 
       - name: Run ETL (50 derniers jeux + update)
-        shell: cmd
         run: python etl_games.py --limit 50
+
+      - name: Upload log (artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: etl-logs
+          path: etl_games.log
+          if-no-files-found: ignore
