@@ -24,7 +24,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ✅ Ecrit .env avec Python (aucun problème de caractères spéciaux)
+      # Ecrit .env avec Python (sécurisé pour caractères spéciaux)
       - name: Build .env from secrets (safe)
         env:
           RAWG_API_KEY: ${{ secrets.RAWG_API_KEY }}
@@ -38,7 +38,7 @@ jobs:
         run: |
           python -c "import os; vals={'LOG_LEVEL':'INFO','HTTP_TIMEOUT':'20','HTTP_RETRIES':'3','SCRAPE_CONFIG':'scrape_sources.json'}; lines=[f'RAWG_API_KEY={os.environ.get(\"RAWG_API_KEY\",\"\")}',f'DB_USER={os.environ.get(\"DB_USER\",\"\")}',f'DB_PASSWORD={os.environ.get(\"DB_PASSWORD\",\"\")}',f'DB_HOST={os.environ.get(\"DB_HOST\",\"\")}',f'DB_PORT={os.environ.get(\"DB_PORT\",\"\")}',f'DB_NAME={os.environ.get(\"DB_NAME\",\"\")}',f'DB_TABLE={os.environ.get(\"DB_TABLE\",\"\")}',f'SCRAPE_ENABLED={os.environ.get(\"SCRAPE_ENABLED\",\"\")}',*[f'{k}={v}' for k,v in vals.items()]]; open('.env','w',encoding='utf-8').write('\\n'.join(lines))"
 
-      # Optionnel : n'écrit le fichier que si le secret est présent
+      # N'écrit le fichier que si le secret est présent
       - name: Write scrape_sources.json if provided
         if: ${{ secrets.SCRAPE_CONFIG_JSON != '' }}
         env:
